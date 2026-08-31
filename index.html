@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Suzy — Renfo</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  :root{
+    --bg:#0f172a;
+    --card:#182236;
+    --card2:#1e2b45;
+    --border:#2a3854;
+    --text:#e8edf7;
+    --muted:#8b98b3;
+    --accent:#2dd4bf;
+    --accent2:#22b8a3;
+    --danger:#f87171;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+  }
+  #pinScreen{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    text-align:center;
+  }
+  #pinScreen h1{font-size:22px;margin-bottom:4px;}
+  #pinScreen p{color:var(--muted);margin-top:0;margin-bottom:24px;font-size:14px;}
+  #pinInput{
+    width:200px;
+    font-size:24px;
+    letter-spacing:8px;
+    text-align:center;
+    padding:12px;
+    border-radius:12px;
+    border:1px solid var(--border);
+    background:var(--card);
+    color:var(--text);
+    margin-bottom:16px;
+  }
+  #pinInput:focus{outline:none;border-color:var(--accent);}
+  #pinBtn{
+    background:var(--accent);
+    color:#03271f;
+    border:none;
+    padding:12px 32px;
+    border-radius:12px;
+    font-size:16px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  #pinError{color:var(--danger);font-size:13px;margin-top:12px;min-height:16px;}
+
+  #app{display:none;padding-bottom:40px;}
+  header.topbar{
+    position:sticky;top:0;z-index:10;
+    background:rgba(15,23,42,0.95);
+    backdrop-filter:blur(6px);
+    padding:16px 16px 0 16px;
+    border-bottom:1px solid var(--border);
+  }
+  header.topbar h1{font-size:18px;margin:0 0 12px 0;}
+  header.topbar h1 span{color:var(--accent);}
+  .tabs{display:flex;gap:8px;}
+  .tab-btn{
+    flex:1;
+    background:none;
+    border:none;
+    color:var(--muted);
+    padding:10px 0 12px 0;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+  }
+  .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+  .view{padding:16px;display:none;}
+  .view.active{display:block;}
+
+  .nav-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  select.nav-select{
+    flex:1;
+    min-width:100px;
+    background:var(--card);
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:10px;
+    font-size:14px;
+  }
+  .seance-pills{display:flex;gap:8px;margin-bottom:16px;}
+  .seance-pill{
+    flex:1;
+    text-align:center;
+    padding:10px 4px;
+    border-radius:10px;
+    background:var(--card);
+    border:1px solid var(--border);
+    color:var(--muted);
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .seance-pill.active{background:var(--accent);border-color:var(--accent);color:#03271f;}
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:16px;
+    margin-bottom:14px;
+  }
+  .card h2{font-size:15px;margin:0 0 10px 0;color:var(--accent);}
+  .card h3{font-size:13px;margin:0 0 8px 0;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+
+  .warmup-text{font-size:13px;line-height:1.8;color:var(--muted);white-space:pre-line;}
+  .warmup-text strong{color:var(--text);}
+
+  .exo-line{
+    border-top:1px solid var(--border);
+    padding:12px 0;
+  }
+  .exo-line:first-of-type{border-top:none;padding-top:0;}
+  .exo-name{font-size:14.5px;font-weight:600;margin-bottom:6px;}
+  .exo-meta-group{display:flex;flex-wrap:wrap;gap:10px 14px;margin-bottom:10px;}
+  .exo-meta{font-size:12px;color:var(--muted);}
+  .exo-meta b{color:var(--text);font-weight:600;}
+
+  .weights-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .weight-slot{display:flex;flex-direction:column;gap:4px;flex:1;min-width:100px;}
+  .weight-slot label{font-size:11px;color:var(--muted);}
+  .weight-input{
+    width:100%;
+    padding:10px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:var(--card2);
+    color:var(--text);
+    font-size:15px;
+  }
+  .weight-input:focus{outline:none;border-color:var(--accent);}
+
+  .abdos-card .exo-series-block{
+    font-size:12.5px;
+    color:var(--muted);
+    line-height:1.9;
+    margin-bottom:12px;
+  }
+
+  textarea.note-input{
+    width:100%;
+    padding:10px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:var(--card2);
+    color:var(--text);
+    font-size:14px;
+    resize:vertical;
+    min-height:60px;
+    font-family:inherit;
+  }
+  textarea.note-input:focus{outline:none;border-color:var(--accent);}
+
+  #saveBtn{
+    width:100%;
+    background:var(--accent);
+    color:#03271f;
+    border:none;
+    padding:14px;
+    border-radius:12px;
+    font-size:16px;
+    font-weight:700;
+    cursor:pointer;
+    margin-top:6px;
+  }
+  #saveMsg{text-align:center;font-size:13px;color:var(--accent);margin-top:10px;min-height:16px;}
+
+  .chart-wrap{background:var(--card2);border-radius:10px;padding:10px;margin-bottom:6px;}
+  canvas{max-width:100%;}
+
+  #clearBtn{
+    width:100%;
+    background:none;
+    border:1px solid var(--danger);
+    color:var(--danger);
+    padding:12px;
+    border-radius:12px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    margin-top:20px;
+  }
+
+  .empty-msg{color:var(--muted);font-size:13px;text-align:center;padding:20px 0;}
+</style>
+</head>
+<body>
+
+<div id="pinScreen">
+  <h1>Suzy 🏋️</h1>
+  <p>Entre le code d'accès</p>
+  <input id="pinInput" type="password" inputmode="numeric" maxlength="6" placeholder="••••">
+  <br>
+  <button id="pinBtn">Entrer</button>
+  <div id="pinError"></div>
+</div>
+
+<div id="app">
+  <header class="topbar">
+    <h1>Suzy <span>· Renfo</span></h1>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="seance">Séance</button>
+      <button class="tab-btn" data-tab="dashboard">Tableau de bord</button>
+    </div>
+  </header>
+
+  <div class="view active" id="view-seance">
+    <div class="nav-row">
+      <select id="weekSelect" class="nav-select"></select>
+    </div>
+    <div class="seance-pills" id="seancePills"></div>
+
+    <div class="card" id="warmupCard">
+      <h2 id="seanceLabel">Séance</h2>
+      <div class="warmup-text" id="warmupText"></div>
+    </div>
+
+    <div class="card" id="exosCard">
+      <h2>Exercices</h2>
+      <div id="exosList"></div>
+    </div>
+
+    <div class="card abdos-card">
+      <h2>Abdos</h2>
+      <div class="exo-series-block" id="abdosText"></div>
+      <textarea class="note-input" id="abdosNote" placeholder="Note (facultatif)"></textarea>
+    </div>
+
+    <div class="card">
+      <h3>Notes de la séance</h3>
+      <textarea class="note-input" id="globalNote" placeholder="Ressenti, douleurs, remarques..."></textarea>
+    </div>
+
+    <button id="saveBtn">Enregistrer la séance</button>
+    <div id="saveMsg"></div>
+  </div>
+
+  <div class="view" id="view-dashboard">
+    <div class="nav-row">
+      <select id="dashExoSelect" class="nav-select"></select>
+    </div>
+    <div class="card">
+      <h2 id="dashChartTitle">Évolution</h2>
+      <div id="dashChartsWrap"></div>
+    </div>
+    <button id="clearBtn">Effacer toutes les données</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- CONFIG ----------
+  const APP_PIN = "8214";
+  const ATHLETE = "Suzy";
+  const SUPABASE_URL = "https://itubxfyqqpthwpqhbrje.supabase.co";
+  const SUPABASE_ANON_KEY = ["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9", "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml0dWJ4ZnlxcXB0aHdwcWhicmplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxNjk4NzcsImV4cCI6MjA5ODc0NTg3N30", "l_E1eAgVRusOJNHHDGbn3ulEXexYJp25gPUG2_7CGBM"].join(".");
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ---------- PROGRAM DATA ----------
+  const CYCLES = {
+    renfo: { label: "Renfo", weeks: ["S1","S2","S3","S4","S5","S6"] }
+  };
+
+  const PROGRAMME = {
+    S1:{label:"Semaine 1", seances:["1","2","3"]},
+    S2:{label:"Semaine 2", seances:["1","2","3"]},
+    S3:{label:"Semaine 3", seances:["1","2","3"]},
+    S4:{label:"Semaine 4", seances:["1","2","3"]},
+    S5:{label:"Semaine 5", seances:["1","2","3"]},
+    S6:{label:"Semaine 6", seances:["1","2","3"]}
+  };
+
+  const WARMUP_BAS = "<strong>Échauffement :</strong> 3’ bike (RPE 3/4 = chill)\n<strong>Mobilité :</strong> 3 tours\n— 10/côté cheville (chevalier servant, appuie sur le genou de la jambe avant en gardant le talon au sol)\n— 10/côté ouverture de hanche (position quadrupédie, genou fléchi, 5 grands cercles en contrôlé dans chaque sens)\n<strong>Activation :</strong> 2 tours\n— 10 air squat profond avec 3’’ pause en bas\n— 5 fentes alternées";
+
+  const WARMUP_HAUT = "<strong>Échauffement :</strong> 3’ vélo/marche/rameur\n<strong>Mobilité :</strong> 2 tours\n— 10/côté rotation épaule R1/R2/R3\n— 10 cercles d’épaules grandes amplitudes et lent\n— 10 dos rond/creux\n<strong>Activation :</strong> Montée en charge tirage horizontal poulie";
+
+  const ABDOS_ROUTINE = "3/4 tours – 1’ récup entre les tours\n— 15 crunch\n— 20 russian twist avec un poids\n— 30 ciseaux verticaux jambes tendues\n— 30’’ à 1’ de gainage axe";
+
+  const SEANCES = {
+    "1": {
+      label: "Bas du corps",
+      warmup: WARMUP_BAS,
+      exercices: [
+        {nom:"Back squat", series:"3 x 10", rpe:7, recup:"1'30-2'"},
+        {nom:"Fentes arrière barre", series:"3 x 12 / côté", rpe:7, recup:"1'30-2'"},
+        {nom:"Hip thrust", series:"3 x 10", rpe:7, recup:"1'30-2'"},
+        {nom:"Abduction hanche poulie basse", series:"3 x 12", rpe:7, recup:"1'15"},
+        {nom:"Kick back poulie basse", series:"3 x 12", rpe:7, recup:"1'15"}
+      ]
+    },
+    "2": {
+      label: "Haut du corps",
+      warmup: WARMUP_HAUT,
+      exercices: [
+        {nom:"Tirage horizontal poulie basse", series:"3 x 12", rpe:7, recup:"1'30"},
+        {nom:"Superset : Élévations frontales / latérales", series:"3 x 12 + 12", rpe:7, recup:"1'30-2'", superset:["Frontales","Latérales"]},
+        {nom:"Superset : Biceps curl supination banc incliné / Triceps extension corde poulie haute", series:"4 x 12 + 12", rpe:7, recup:"1'15", superset:["Biceps curl","Triceps corde"]},
+        {nom:"Superset : Biceps marteau haltère alterné / Triceps extension poulie haute derrière soi", series:"4 x 12 + 12", rpe:7, recup:"1'15", superset:["Biceps marteau","Triceps derrière"]}
+      ]
+    },
+    "3": {
+      label: "Bas du corps",
+      warmup: WARMUP_BAS,
+      exercices: [
+        {nom:"Romanian deadlift", series:"3 x 10", rpe:7, recup:"1'30-2'"},
+        {nom:"Leg extension", series:"3 x 12", rpe:7, recup:"1'30"},
+        {nom:"Leg curl", series:"3 x 10", rpe:7, recup:"1'30"},
+        {nom:"Box step up", series:"3 x 12 / côté", rpe:7, recup:"1'15"},
+        {nom:"Mollet extension debout", series:"3 x 15", rpe:7, recup:"1'15"}
+      ]
+    }
+  };
+
+  function getSeanceDef(week, code){
+    return SEANCES[code];
+  }
+
+  // ---------- STATE ----------
+  const CYCLE_KEYS = Object.keys(CYCLES);
+  let currentCycle = CYCLE_KEYS[CYCLE_KEYS.length - 1];
+  let currentWeek = CYCLES[currentCycle].weeks[CYCLES[currentCycle].weeks.length - 1];
+  let currentSeance = PROGRAMME[currentWeek].seances[0];
+
+  // ---------- PIN GATE ----------
+  const pinScreen = document.getElementById("pinScreen");
+  const appEl = document.getElementById("app");
+  const pinInput = document.getElementById("pinInput");
+  const pinBtn = document.getElementById("pinBtn");
+  const pinError = document.getElementById("pinError");
+
+  function safeGetStorage(key){
+    try { return localStorage.getItem(key); } catch(e) { return null; }
+  }
+  function safeSetStorage(key, val){
+    try { localStorage.setItem(key, val); } catch(e) {}
+  }
+
+  function tryPin(){
+    if(pinInput.value === APP_PIN){
+      pinScreen.style.display = "none";
+      appEl.style.display = "block";
+      safeSetStorage("suzy_pin_ok", "1");
+      initApp();
+    } else {
+      pinError.textContent = "Code incorrect";
+    }
+  }
+  pinBtn.addEventListener("click", tryPin);
+  pinInput.addEventListener("keydown", e => { if(e.key === "Enter") tryPin(); });
+
+  if(safeGetStorage("suzy_pin_ok") === "1"){
+    pinScreen.style.display = "none";
+    appEl.style.display = "block";
+    initApp();
+  }
+
+  // ---------- TABS ----------
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("view-" + btn.dataset.tab).classList.add("active");
+      if(btn.dataset.tab === "dashboard") renderDashboard();
+    });
+  });
+
+  // ---------- INIT ----------
+  let initialized = false;
+  function initApp(){
+    if(initialized) return;
+    initialized = true;
+
+    const weekSelect = document.getElementById("weekSelect");
+    CYCLES[currentCycle].weeks.forEach(w => {
+      const opt = document.createElement("option");
+      opt.value = w;
+      opt.textContent = PROGRAMME[w].label;
+      weekSelect.appendChild(opt);
+    });
+    weekSelect.value = currentWeek;
+    weekSelect.addEventListener("change", () => {
+      currentWeek = weekSelect.value;
+      if(!PROGRAMME[currentWeek].seances.includes(currentSeance)){
+        currentSeance = PROGRAMME[currentWeek].seances[0];
+      }
+      renderSeanceNav();
+      loadSeance();
+    });
+
+    renderSeanceNav();
+    loadSeance();
+
+    document.getElementById("saveBtn").addEventListener("click", saveSession);
+    document.getElementById("clearBtn").addEventListener("click", clearAllData);
+
+    const dashExoSelect = document.getElementById("dashExoSelect");
+    buildExoCatalog().forEach(e => {
+      const opt = document.createElement("option");
+      opt.value = e.key;
+      opt.textContent = e.label;
+      dashExoSelect.appendChild(opt);
+    });
+    dashExoSelect.addEventListener("change", renderDashboard);
+  }
+
+  function renderSeanceNav(){
+    const wrap = document.getElementById("seancePills");
+    wrap.innerHTML = "";
+    PROGRAMME[currentWeek].seances.forEach(code => {
+      const pill = document.createElement("div");
+      pill.className = "seance-pill" + (code === currentSeance ? " active" : "");
+      pill.textContent = "Séance " + code;
+      pill.addEventListener("click", () => {
+        currentSeance = code;
+        renderSeanceNav();
+        loadSeance();
+      });
+      wrap.appendChild(pill);
+    });
+  }
+
+  // ---------- RENDER SEANCE ----------
+  let existingEntry = null;
+
+  async function loadSeance(){
+    const def = getSeanceDef(currentWeek, currentSeance);
+    document.getElementById("seanceLabel").textContent = "Séance " + currentSeance + " — " + def.label;
+    document.getElementById("warmupText").innerHTML = def.warmup.replace(/\n/g, "<br>");
+    document.getElementById("abdosText").innerHTML = ABDOS_ROUTINE.replace(/\n/g, "<br>");
+
+    const exosList = document.getElementById("exosList");
+    exosList.innerHTML = "";
+    def.exercices.forEach(exo => {
+      exosList.appendChild(renderExoLine(exo));
+    });
+
+    document.getElementById("globalNote").value = "";
+    document.getElementById("abdosNote").value = "";
+    document.getElementById("saveMsg").textContent = "";
+    existingEntry = null;
+
+    const { data, error } = await supabase
+      .from("sessions")
+      .select("*")
+      .eq("athlete", ATHLETE)
+      .eq("week", currentWeek)
+      .eq("seance", currentSeance)
+      .maybeSingle();
+
+    if(!error && data){
+      existingEntry = data;
+      fillFromEntry(def, data);
+    }
+  }
+
+  function renderExoLine(exo){
+    const line = document.createElement("div");
+    line.className = "exo-line";
+    line.dataset.exo = exo.nom;
+
+    const name = document.createElement("div");
+    name.className = "exo-name";
+    name.textContent = exo.nom;
+    line.appendChild(name);
+
+    const meta = document.createElement("div");
+    meta.className = "exo-meta-group";
+    meta.innerHTML =
+      '<span class="exo-meta">Séries : <b>' + exo.series + '</b></span>' +
+      '<span class="exo-meta">RPE : <b>' + exo.rpe + '</b></span>' +
+      '<span class="exo-meta">Récup : <b>' + exo.recup + '</b></span>';
+    line.appendChild(meta);
+
+    const weightsRow = document.createElement("div");
+    weightsRow.className = "weights-row";
+
+    if(exo.superset && exo.superset.length){
+      exo.superset.forEach((slotLabel, i) => {
+        const slot = document.createElement("div");
+        slot.className = "weight-slot";
+        slot.innerHTML =
+          '<label>' + slotLabel + ' (kg)</label>' +
+          '<input type="number" step="0.5" class="weight-input" data-slot="' + i + '">';
+        weightsRow.appendChild(slot);
+      });
+    } else {
+      const slot = document.createElement("div");
+      slot.className = "weight-slot";
+      slot.innerHTML =
+        '<label>Charge (kg)</label>' +
+        '<input type="number" step="0.5" class="weight-input" data-slot="0">';
+      weightsRow.appendChild(slot);
+    }
+    line.appendChild(weightsRow);
+    return line;
+  }
+
+  function fillFromEntry(def, entry){
+    const weights = entry.weights || {};
+    const notes = entry.notes || {};
+    def.exercices.forEach(exo => {
+      const val = weights[exo.nom];
+      if(val === undefined) return;
+      const line = document.querySelector('.exo-line[data-exo="' + CSS.escape(exo.nom) + '"]');
+      if(!line) return;
+      const inputs = line.querySelectorAll(".weight-input");
+      if(Array.isArray(val)){
+        val.forEach((v, i) => { if(inputs[i] && v !== null && v !== undefined) inputs[i].value = v; });
+      } else if(inputs[0]){
+        inputs[0].value = val;
+      }
+    });
+    if(notes.global) document.getElementById("globalNote").value = notes.global;
+    if(notes.abdos) document.getElementById("abdosNote").value = notes.abdos;
+  }
+
+  // ---------- SAVE ----------
+  async function saveSession(){
+    const def = getSeanceDef(currentWeek, currentSeance);
+    const weights = {};
+    def.exercices.forEach(exo => {
+      const line = document.querySelector('.exo-line[data-exo="' + CSS.escape(exo.nom) + '"]');
+      const inputs = Array.from(line.querySelectorAll(".weight-input"));
+      const vals = inputs.map(inp => inp.value === "" ? null : parseFloat(inp.value));
+      if(vals.some(v => v !== null)){
+        weights[exo.nom] = (exo.superset && exo.superset.length) ? vals : vals[0];
+      }
+    });
+
+    const notes = {
+      global: document.getElementById("globalNote").value || "",
+      abdos: document.getElementById("abdosNote").value || ""
+    };
+
+    const payload = {
+      athlete: ATHLETE,
+      week: currentWeek,
+      seance: currentSeance,
+      label: def.label,
+      date_recorded: new Date().toISOString().slice(0,10),
+      hooper: null,
+      weights: weights,
+      notes: notes
+    };
+
+    const saveMsg = document.getElementById("saveMsg");
+    saveMsg.textContent = "Enregistrement...";
+
+    const { error } = await supabase
+      .from("sessions")
+      .upsert(payload, { onConflict: "athlete,week,seance" });
+
+    if(error){
+      saveMsg.textContent = "Erreur : " + error.message;
+      saveMsg.style.color = "var(--danger)";
+    } else {
+      saveMsg.textContent = "✓ Séance enregistrée";
+      saveMsg.style.color = "var(--accent)";
+    }
+  }
+
+  // ---------- DASHBOARD ----------
+  function buildExoCatalog(){
+    const catalog = [];
+    const seen = new Set();
+    Object.keys(SEANCES).forEach(code => {
+      SEANCES[code].exercices.forEach(exo => {
+        if(seen.has(exo.nom)) return;
+        seen.add(exo.nom);
+        catalog.push({
+          key: exo.nom,
+          label: exo.nom,
+          seanceCode: code,
+          slots: (exo.superset && exo.superset.length) ? exo.superset : null
+        });
+      });
+    });
+    return catalog;
+  }
+
+  let dashCharts = [];
+
+  async function renderDashboard(){
+    const catalog = buildExoCatalog();
+    const dashExoSelect = document.getElementById("dashExoSelect");
+    const selectedKey = dashExoSelect.value || catalog[0].key;
+    const exoInfo = catalog.find(e => e.key === selectedKey);
+
+    const { data, error } = await supabase
+      .from("sessions")
+      .select("*")
+      .eq("athlete", ATHLETE)
+      .order("week", { ascending: true });
+
+    dashCharts.forEach(c => c.destroy());
+    dashCharts = [];
+
+    const wrap = document.getElementById("dashChartsWrap");
+    wrap.innerHTML = "";
+
+    if(error || !data || !data.length){
+      wrap.innerHTML = '<div class="empty-msg">Pas encore de données enregistrées.</div>';
+      return;
+    }
+
+    const weekOrder = CYCLES[currentCycle].weeks;
+    const relevant = data
+      .filter(s => s.seance === exoInfo.seanceCode && weekOrder.includes(s.week))
+      .sort((a,b) => weekOrder.indexOf(a.week) - weekOrder.indexOf(b.week));
+
+    if(!relevant.length){
+      wrap.innerHTML = '<div class="empty-msg">Pas encore de données pour cet exercice.</div>';
+      return;
+    }
+
+    if(exoInfo.slots){
+      exoInfo.slots.forEach((slotLabel, i) => {
+        const labels = [];
+        const vals = [];
+        relevant.forEach(s => {
+          const arr = s.weights && s.weights[exoInfo.key];
+          if(Array.isArray(arr) && arr.length === exoInfo.slots.length && arr[i] !== null && arr[i] !== undefined){
+            labels.push(PROGRAMME[s.week] ? PROGRAMME[s.week].label : s.week);
+            vals.push(arr[i]);
+          }
+        });
+        wrap.appendChild(makeChartBlock(slotLabel, labels, vals));
+      });
+    } else {
+      const labels = [];
+      const vals = [];
+      relevant.forEach(s => {
+        const v = s.weights && s.weights[exoInfo.key];
+        if(typeof v === "number"){
+          labels.push(PROGRAMME[s.week] ? PROGRAMME[s.week].label : s.week);
+          vals.push(v);
+        }
+      });
+      wrap.appendChild(makeChartBlock(exoInfo.label, labels, vals));
+    }
+  }
+
+  function makeChartBlock(title, labels, vals){
+    const block = document.createElement("div");
+    block.className = "chart-wrap";
+    const h = document.createElement("h3");
+    h.textContent = title;
+    const canvas = document.createElement("canvas");
+    block.appendChild(h);
+    block.appendChild(canvas);
+
+    if(!labels.length){
+      const msg = document.createElement("div");
+      msg.className = "empty-msg";
+      msg.textContent = "Pas de données";
+      block.appendChild(msg);
+      return block;
+    }
+
+    const chart = new Chart(canvas.getContext("2d"), {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: title,
+          data: vals,
+          borderColor: "#2dd4bf",
+          backgroundColor: "rgba(45,212,191,0.15)",
+          tension: 0.3,
+          fill: true,
+          pointRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: "#8b98b3" }, grid: { color: "#2a3854" } },
+          y: { ticks: { color: "#8b98b3" }, grid: { color: "#2a3854" } }
+        }
+      }
+    });
+    dashCharts.push(chart);
+    return block;
+  }
+
+  async function clearAllData(){
+    if(!confirm("Supprimer toutes les données de Suzy ? Cette action est irréversible.")) return;
+    const { error } = await supabase.from("sessions").delete().eq("athlete", ATHLETE);
+    if(error){
+      alert("Erreur : " + error.message);
+    } else {
+      alert("Toutes les données ont été supprimées.");
+      renderDashboard();
+    }
+  }
+
+})();
+</script>
+</body>
+</html>
