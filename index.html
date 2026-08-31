@@ -344,6 +344,9 @@
   let currentCycle = CYCLE_KEYS[CYCLE_KEYS.length - 1];
   let currentWeek = CYCLES[currentCycle].weeks[CYCLES[currentCycle].weeks.length - 1];
   let currentSeance = PROGRAMME[currentWeek].seances[0];
+  let initialized = false;
+  let existingEntry = null;
+  let dashCharts = [];
 
   // ---------- PIN GATE ----------
   const pinScreen = document.getElementById("pinScreen");
@@ -390,7 +393,6 @@
   });
 
   // ---------- INIT ----------
-  let initialized = false;
   function initApp(){
     if(initialized) return;
     initialized = true;
@@ -445,7 +447,6 @@
   }
 
   // ---------- RENDER SEANCE ----------
-  let existingEntry = null;
 
   async function loadSeance(){
     const def = getSeanceDef(currentWeek, currentSeance);
@@ -602,8 +603,6 @@
     });
     return catalog;
   }
-
-  let dashCharts = [];
 
   async function renderDashboard(){
     const catalog = buildExoCatalog();
