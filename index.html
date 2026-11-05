@@ -40,7 +40,7 @@
   #pinInput{
     width:200px;
     font-size:24px;
-    letter-spacing:8px;
+    letter-spacing:4px;
     text-align:center;
     padding:12px;
     border-radius:12px;
@@ -211,7 +211,7 @@
 <div id="pinScreen">
   <h1>Suzy 🏋️</h1>
   <p>Entre le code d'accès</p>
-  <input id="pinInput" type="password" inputmode="numeric" maxlength="6" placeholder="••••">
+  <input id="pinInput" type="password" autocomplete="current-password" placeholder="Code d'accès">
   <br>
   <button id="pinBtn">Entrer</button>
   <div id="pinError"></div>
@@ -274,7 +274,9 @@
   "use strict";
 
   // ---------- CONFIG ----------
-  const APP_PIN = "8214";
+  // Connexion : le code d'accès est le mot de passe du compte Supabase ci-dessous.
+  // Il n'est plus écrit dans le code : c'est Supabase qui le vérifie.
+  const LOGIN_EMAIL = "suzy@athletes.invalid";
   const ATHLETE = "Suzy";
   const SUPABASE_URL = "https://itubxfyqqpthwpqhbrje.supabase.co";
   const SUPABASE_ANON_KEY = ["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9", "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml0dWJ4ZnlxcXB0aHdwcWhicmplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxNjk4NzcsImV4cCI6MjA5ODc0NTg3N30", "l_E1eAgVRusOJNHHDGbn3ulEXexYJp25gPUG2_7CGBM"].join(".");
@@ -355,31 +357,35 @@
   const pinBtn = document.getElementById("pinBtn");
   const pinError = document.getElementById("pinError");
 
-  function safeGetStorage(key){
-    try { return localStorage.getItem(key); } catch(e) { return null; }
-  }
-  function safeSetStorage(key, val){
-    try { localStorage.setItem(key, val); } catch(e) {}
-  }
-
-  function tryPin(){
-    if(pinInput.value === APP_PIN){
-      pinScreen.style.display = "none";
-      appEl.style.display = "block";
-      safeSetStorage("suzy_pin_ok", "1");
-      initApp();
-    } else {
-      pinError.textContent = "Code incorrect";
+  let loginBusy = false;
+  async function tryPin(){
+    if(!pinInput.value || loginBusy) return;
+    loginBusy = true;
+    pinError.textContent = "";
+    const { error } = await supabase.auth.signInWithPassword({ email: LOGIN_EMAIL, password: pinInput.value });
+    loginBusy = false;
+    if(error){
+      console.error(error);
+      pinError.textContent = (error.code === "invalid_credentials" || error.status === 400) ? "Code incorrect" : "Connexion impossible, réessaie dans un instant";
+      return;
     }
-  }
-  pinBtn.addEventListener("click", tryPin);
-  pinInput.addEventListener("keydown", e => { if(e.key === "Enter") tryPin(); });
-
-  if(safeGetStorage("suzy_pin_ok") === "1"){
+    pinInput.value = "";
     pinScreen.style.display = "none";
     appEl.style.display = "block";
     initApp();
   }
+  pinBtn.addEventListener("click", tryPin);
+  pinInput.addEventListener("keydown", e => { if(e.key === "Enter") tryPin(); });
+
+  // La session Supabase reste mémorisée sur l'appareil : pas besoin de retaper le code.
+  try { localStorage.removeItem("suzy_pin_ok"); } catch(e) {}
+  supabase.auth.getSession().then(({ data }) => {
+    if(data.session){
+      pinScreen.style.display = "none";
+      appEl.style.display = "block";
+      initApp();
+    }
+  });
 
   // ---------- TABS ----------
   document.querySelectorAll(".tab-btn").forEach(btn => {
